@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Il Mio Budget</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Il Mio Budget">
+    <meta name="theme-color" content="#7c2ce5">
+</head>
+<body>
+
+<!-- ======================== -->
+<!-- MODALE SETUP INIZIALE   -->
+<!-- ======================== -->
+<div id="modale-setup" class="modale-overlay" style="display:none;">
+    <div class="modale-box modale-setup-box">
+        <div class="setup-logo">💼</div>
+        <h2>Benvenuto in Il Mio Budget</h2>
+        <p class="setup-sottotitolo">Configura la tua app in pochi secondi</p>
+        <div class="setup-step" id="setup-step-1">
+            <div class="setup-step-label">Passo 1 di 2</div>
+            <h3>Quando ricevi lo stipendio?</h3>
+            <p class="setup-desc">Il tuo mese fiscale partirà da questo giorno ogni mese.</p>
+            <div class="setup-giorno-griglia" id="griglia-giorni"></div>
+        </div>
+        <div class="setup-step" id="setup-step-2" style="display:none;">
+            <div class="setup-step-label">Passo 2 di 2</div>
+            <h3>Quale valuta usi?</h3>
+            <p class="setup-desc">Puoi cambiarla in seguito dalle impostazioni.</p>
+            <div class="setup-valute">
+                <button class="valuta-btn attivo" data-valuta="€" data-codice="EUR" onclick="selezionaValuta(this)">€ Euro</button>
+                <button class="valuta-btn" data-valuta="$" data-codice="USD" onclick="selezionaValuta(this)">$ Dollaro</button>
+                <button class="valuta-btn" data-valuta="£" data-codice="GBP" onclick="selezionaValuta(this)">£ Sterlina</button>
+                <button class="valuta-btn" data-valuta="CHF" data-codice="CHF" onclick="selezionaValuta(this)">CHF Franco</button>
+            </div>
+        </div>
+        <div class="setup-azioni">
+            <button id="btn-setup-avanti" class="btn-setup-primario" onclick="setupAvanti()">Avanti →</button>
+            <button id="btn-setup-indietro" class="btn-setup-secondario" style="display:none;" onclick="setupIndietro()">← Indietro</button>
+        </div>
+    </div>
+</div>
+
+<!-- ======================== -->
+<!-- MODALE AGGIUNTA VOCE    -->
+<!-- ======================== -->
+<div id="modale-voce" class="modale-overlay" style="display:none;">
+    <div class="modale-box">
+        <div class="modale-header">
+            <span id="modale-voce-titolo">Aggiungi voce</span>
+            <button class="btn-modale-chiudi" onclick="chiudiModaleVoce()">✕</button>
+        </div>
+        <div id="modale-voce-corpo">
+            <div class="form-card">
+                <label>Descrizione</label>
+                <input type="text" id="voce-descrizione" placeholder="Es. Stipendio, Affitto, Supermercato...">
+                <label>Importo</label>
+                <div class="importo-row">
+                    <span id="voce-valuta-simbolo" class="valuta-prefix">€</span>
+                    <input type="number" id="voce-importo" placeholder="0.00" min="0" step="0.01">
+                </div>
+                <label>Categoria</label>
+                <select id="voce-categoria"></select>
+                <label>Data</label>
+                <input type="date" id="voce-data">
+                <label>Note (opzionale)</label>
+                <input type="text" id="voce-note" placeholder="Aggiunta facoltativa...">
+                <button class="btn-aggiungi" onclick="salvaVoce()">+ Aggiungi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================== -->
+<!-- MODALE MODIFICA CATEGORIA -->
+<!-- ======================== -->
+<div id="modale-modifica-cat" class="modale-overlay" style="display:none;">
+    <div class="modale-box" style="max-width:400px;">
+        <div class="modale-header">
+            <span>✏️ Modifica categoria</span>
+            <button class="btn-modale-chiudi" onclick="chiudiModaleModificaCat()">✕</button>
+        </div>
+        <div style="padding:20px;">
+            <label>Nuovo nome</label>
+            <input type="text" id="modifica-cat-input" placeholder="Nome categoria...">
+            <p id="modifica-cat-avviso" style="font-size:12px;color:#999;margin-top:8px;">Le transazioni esistenti con questa categoria verranno aggiornate.</p>
+            <button class="btn-aggiungi" style="margin-top:16px;" onclick="salvaModificaCategoria()">💾 Salva</button>
+        </div>
+    </div>
+</div>
+
+<!-- ======================== -->
+<!-- HEADER                  -->
+<!-- ======================== -->
+<header>
+    <h1 onclick="tornaAllaHome()" title="Torna alla dashboard">💼 Il Mio Budget</h1>
+    <nav>
+        <button onclick="mostraVista('vista-dashboard')" id="nav-dashboard" class="nav-btn attivo">🏠 Dashboard</button>
+        <button onclick="mostraVista('vista-entrate')" id="nav-entrate" class="nav-btn">💰 Entrate</button>
+        <button onclick="mostraVista('vista-uscite')" id="nav-uscite" class="nav-btn">💸 Uscite</button>
+        <button onclick="mostraVista('vista-savings')" id="nav-savings" class="nav-btn">📈 Savings</button>
+        <button onclick="mostraVista('vista-impostazioni')" id="nav-impostazioni" class="nav-btn">⚙️</button>
+    </nav>
+</header>
+
+<!-- ======================== -->
+<!-- VISTA: DASHBOARD        -->
+<!-- ======================== -->
+<div id="vista-dashboard" class="vista">
+    <div class="layout-sidebar">
+
+        <!-- SIDEBAR MESI -->
+        <aside id="sidebar-mesi">
+            <h3>📅 Mesi fiscali</h3>
+            <div id="sidebar-lista-mesi"></div>
+        </aside>
+
+        <!-- SELETTORE MOBILE MESI -->
+        <div id="selettore-mobile-mesi">
+            <select id="select-mese-mobile" onchange="selezionaMeseDaDropdown()">
+                <option value="corrente">📅 Mese corrente</option>
+            </select>
+        </div>
+
+        <!-- AREA PRINCIPALE DASHBOARD -->
+        <main id="dashboard-main">
+            <div id="dashboard-contenuto">
+                <div class="periodo-header">
+                    <div>
+                        <div class="periodo-label" id="periodo-label-testo">Mese fiscale in corso</div>
+                        <div id="periodo-testo" class="periodo-testo">—</div>
+                    </div>
+                    <div id="giorni-rimasti-box" class="giorni-rimasti-box">
+                        <div class="giorni-numero" id="giorni-rimasti-num">—</div>
+                        <div class="giorni-label">giorni al prossimo stipendio</div>
+                    </div>
+                </div>
+
+                <div id="dashboard-saldo" class="saldo-card">
+                    <div class="saldo-label">Saldo del mese</div>
+                    <div class="saldo-valore" id="saldo-valore">€ 0,00</div>
+                    <div class="saldo-barra-wrap">
+                        <div class="saldo-barra-inner" id="saldo-barra"></div>
+                    </div>
+                    <div class="saldo-sub">
+                        <span id="saldo-sub-e">↑ € 0,00 entrate</span>
+                        <span id="saldo-sub-u">↓ € 0,00 uscite</span>
+                    </div>
+                </div>
+
+                <div class="kpi-griglia">
+                    <div class="kpi-card kpi-verde">
+                        <div class="kpi-icona">💰</div>
+                        <div class="kpi-valore" id="kpi-entrate">€ 0</div>
+                        <div class="kpi-label">Entrate</div>
+                    </div>
+                    <div class="kpi-card kpi-rosso">
+                        <div class="kpi-icona">💸</div>
+                        <div class="kpi-valore" id="kpi-uscite">€ 0</div>
+                        <div class="kpi-label">Uscite</div>
+                    </div>
+                    <div class="kpi-card kpi-viola">
+                        <div class="kpi-icona">📈</div>
+                        <div class="kpi-valore" id="kpi-savings">€ 0</div>
+                        <div class="kpi-label">Capitale investito</div>
+                    </div>
+                </div>
+
+                <!-- Grafici torta dashboard (visibili solo mesi storici) -->
+                <div id="dashboard-grafici" style="display:none;">
+                    <div class="grafici-row">
+                        <div class="grafico-card grafico-metà">
+                            <h4>Entrate per categoria</h4>
+                            <div class="grafico-wrapper-piccolo">
+                                <canvas id="grafico-dash-entrate"></canvas>
+                            </div>
+                            <div id="legenda-dash-entrate" class="legenda-custom"></div>
+                        </div>
+                        <div class="grafico-card grafico-metà">
+                            <h4>Uscite per categoria</h4>
+                            <div class="grafico-wrapper-piccolo">
+                                <canvas id="grafico-dash-uscite"></canvas>
+                            </div>
+                            <div id="legenda-dash-uscite" class="legenda-custom"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sezione-titolo-row">
+                    <h3 id="transazioni-titolo">Ultime transazioni</h3>
+                    <div id="bottoni-aggiunta" class="bottoni-aggiunta-group">
+                        <button class="btn-aggiungi-piccolo" onclick="apriModaleVoce('entrata')">+ Entrata</button>
+                        <button class="btn-aggiungi-piccolo btn-rosso" onclick="apriModaleVoce('uscita')">+ Uscita</button>
+                    </div>
+                </div>
+                <div id="dashboard-ultime-transazioni">
+                    <div class="vuoto-stato">
+                        <div class="vuoto-icona">📋</div>
+                        <p>Nessuna transazione questo mese.<br>Aggiungi entrate e uscite per iniziare.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- ======================== -->
+<!-- VISTA: ENTRATE          -->
+<!-- ======================== -->
+<div id="vista-entrate" class="vista" style="display:none;">
+    <div class="vista-contenuto">
+        <div class="vista-header-row">
+            <h2>💰 Entrate</h2>
+            <button class="btn-aggiungi-principale" onclick="apriModaleVoce('entrata')">+ Aggiungi</button>
+        </div>
+        <div class="grafico-card">
+            <h4>Distribuzione per categoria</h4>
+            <div class="grafico-wrapper">
+                <canvas id="grafico-entrate"></canvas>
+            </div>
+            <div id="legenda-entrate" class="legenda-custom"></div>
+        </div>
+        <div class="sezione-titolo-row">
+            <h3>Tutte le entrate</h3>
+            <select id="filtro-mese-entrate" class="filtro-mese" onchange="renderEntrate()">
+                <option value="corrente">Mese corrente</option>
+                <option value="precedente">Mese precedente</option>
+                <option value="tutti">Tutti i mesi</option>
+            </select>
+        </div>
+        <div id="lista-entrate">
+            <div class="vuoto-stato">
+                <div class="vuoto-icona">💰</div>
+                <p>Nessuna entrata registrata.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================== -->
+<!-- VISTA: USCITE           -->
+<!-- ======================== -->
+<div id="vista-uscite" class="vista" style="display:none;">
+    <div class="vista-contenuto">
+        <div class="vista-header-row">
+            <h2>💸 Uscite</h2>
+            <button class="btn-aggiungi-principale" onclick="apriModaleVoce('uscita')">+ Aggiungi</button>
+        </div>
+        <div class="grafico-card">
+            <h4>Distribuzione per categoria</h4>
+            <div class="grafico-wrapper">
+                <canvas id="grafico-uscite"></canvas>
+            </div>
+            <div id="legenda-uscite" class="legenda-custom"></div>
+        </div>
+        <div class="sezione-titolo-row">
+            <h3>Tutte le uscite</h3>
+            <select id="filtro-mese-uscite" class="filtro-mese" onchange="renderUscite()">
+                <option value="corrente">Mese corrente</option>
+                <option value="precedente">Mese precedente</option>
+                <option value="tutti">Tutti i mesi</option>
+            </select>
+        </div>
+        <div id="lista-uscite">
+            <div class="vuoto-stato">
+                <div class="vuoto-icona">💸</div>
+                <p>Nessuna uscita registrata.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================== -->
+<!-- VISTA: SAVINGS          -->
+<!-- ======================== -->
+<div id="vista-savings" class="vista" style="display:none;">
+    <div class="vista-contenuto">
+        <div class="vista-header-row">
+            <h2>📈 Savings & Investimenti</h2>
+        </div>
+
+        <div class="savings-capitale-card">
+            <div>
+                <div class="savings-capitale-label">Capitale attuale</div>
+                <div class="savings-capitale-valore" id="savings-capitale-display">€ 0,00</div>
+            </div>
+            <button class="btn-modifica-capitale" onclick="apriModaleCapitale()">✏️ Modifica</button>
+        </div>
+
+        <div class="simulatore-card">
+            <h3>🔮 Simulatore di crescita</h3>
+            <p class="simulatore-desc">Inizia a digitare: ti suggeriamo subito gli asset più comuni con il loro rendimento storico. Se non trovi quello che cerchi, prova comunque la ricerca: faremo un tentativo esteso.</p>
+
+            <div class="sim-search-box">
+                <label>Cerca asset per nome o ticker</label>
+                <div class="sim-search-row" style="position:relative;">
+                    <input type="text" id="sim-asset-query" placeholder="Es. FTSE All-World, VWCE, S&P 500, BTP, Oro..." autocomplete="off"
+                           oninput="onInputAsset()" onfocus="onInputAsset()" onblur="nascondiSuggerimentiAsset()">
+                    <button class="btn-cerca-asset" onclick="cercaAsset()" id="btn-cerca-asset">
+                        <span id="cerca-asset-txt">🔍 Cerca</span>
+                    </button>
+                    <div id="sim-asset-suggerimenti" class="sim-asset-suggerimenti" style="display:none;"></div>
+                </div>
+                <div id="sim-asset-risultato" class="sim-asset-risultato" style="display:none;"></div>
+            </div>
+
+            <div class="sim-griglia">
+                <div class="sim-campo">
+                    <label>Rendimento annuo atteso (%)</label>
+                    <input type="number" id="sim-rendimento" value="" min="0" max="200" step="0.1" placeholder="Es. 10.5">
+                    <div id="sim-rendimento-nota" class="sim-nota">🔍 Cerca un asset sopra oppure inserisci manualmente</div>
+                </div>
+                <div class="sim-campo">
+                    <label>Contributo mensile</label>
+                    <div class="importo-row">
+                        <span id="sim-valuta-prefix" class="valuta-prefix">€</span>
+                        <input type="number" id="sim-contributo" value="100" min="0" step="10">
+                    </div>
+                </div>
+                <div class="sim-campo">
+                    <label>Orizzonte temporale</label>
+                    <select id="sim-anni">
+                        <option value="5">5 anni</option>
+                        <option value="10" selected>10 anni</option>
+                        <option value="15">15 anni</option>
+                        <option value="20">20 anni</option>
+                        <option value="30">30 anni</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn-aggiungi" onclick="calcolaSimulazione()">📊 Calcola proiezione</button>
+        </div>
+
+        <div id="risultato-simulazione" style="display:none;">
+            <div class="sim-risultato-kpi">
+                <div class="sim-kpi-card sim-kpi-viola">
+                    <div class="sim-kpi-label">Valore finale stimato</div>
+                    <div class="sim-kpi-valore" id="sim-valore-finale">—</div>
+                </div>
+                <div class="sim-kpi-card sim-kpi-grigio">
+                    <div class="sim-kpi-label">Capitale versato</div>
+                    <div class="sim-kpi-valore" id="sim-capitale-versato">—</div>
+                </div>
+                <div class="sim-kpi-card sim-kpi-verde">
+                    <div class="sim-kpi-label">Rendimento maturato</div>
+                    <div class="sim-kpi-valore" id="sim-rendimento-maturato">—</div>
+                </div>
+            </div>
+            <div class="grafico-card">
+                <h4 id="sim-grafico-titolo">Crescita stimata nel tempo</h4>
+                <div class="grafico-wrapper-alto">
+                    <canvas id="grafico-savings"></canvas>
+                </div>
+                <p class="sim-disclaimer">⚠️ Simulazione indicativa basata su dati storici medi. Non costituisce consulenza finanziaria.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================== -->
+<!-- VISTA: IMPOSTAZIONI     -->
+<!-- ======================== -->
+<div id="vista-impostazioni" class="vista" style="display:none;">
+    <div class="vista-contenuto">
+        <h2>⚙️ Impostazioni</h2>
+
+        <div class="impostazioni-gruppo">
+            <h3 class="impostazioni-titolo">📅 Mese fiscale</h3>
+            <div class="impostazioni-riga">
+                <div>
+                    <strong>Giorno di inizio</strong>
+                    <p id="imp-giorno-desc">Il tuo mese inizia il giorno —</p>
+                </div>
+                <button class="btn-impostazioni-azione" onclick="apriModaleSetupGiorno()">Modifica</button>
+            </div>
+        </div>
+
+        <div class="impostazioni-gruppo">
+            <h3 class="impostazioni-titolo">💱 Valuta</h3>
+            <div class="impostazioni-riga">
+                <div>
+                    <strong>Valuta corrente</strong>
+                    <p id="imp-valuta-desc">—</p>
+                </div>
+                <button class="btn-impostazioni-azione" onclick="apriModaleSetupValuta()">Modifica</button>
+            </div>
+        </div>
+
+        <div class="impostazioni-gruppo">
+            <h3 class="impostazioni-titolo">🗂️ Categorie</h3>
+            <p class="impostazioni-desc">Modifica o aggiungi categorie per entrate e uscite. Clicca ✏️ per rinominare, ✕ per eliminare le personalizzate.</p>
+            <div class="categorie-tabs">
+                <button class="cat-tab attivo" onclick="switchCatTab('entrate', this)">Entrate</button>
+                <button class="cat-tab" onclick="switchCatTab('uscite', this)">Uscite</button>
+            </div>
+            <div id="cat-tab-entrate">
+                <div id="lista-cat-entrate" class="lista-categorie"></div>
+                <div class="aggiungi-categoria-row">
+                    <input type="text" id="nuova-cat-entrata" placeholder="Es. Freelance, Dividendi...">
+                    <button class="btn-aggiungi-cat" onclick="aggiungiCategoria('entrata')">+</button>
+                </div>
+            </div>
+            <div id="cat-tab-uscite" style="display:none;">
+                <div id="lista-cat-uscite" class="lista-categorie"></div>
+                <div class="aggiungi-categoria-row">
+                    <input type="text" id="nuova-cat-uscita" placeholder="Es. Abbonamenti, Palestra...">
+                    <button class="btn-aggiungi-cat" onclick="aggiungiCategoria('uscita')">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="impostazioni-gruppo">
+            <h3 class="impostazioni-titolo">💾 Backup dati</h3>
+            <div class="impostazioni-riga">
+                <div><strong>Esporta tutti i dati</strong><p>Salva un file JSON con tutti i tuoi dati</p></div>
+                <button class="btn-impostazioni-azione" onclick="esportaDati()">📥 Esporta</button>
+            </div>
+            <div class="impostazioni-riga">
+                <div><strong>Importa dati</strong><p>Ripristina da un file JSON precedentemente esportato</p></div>
+                <label class="btn-impostazioni-azione" style="cursor:pointer;">
+                    📤 Importa
+                    <input type="file" accept=".json" style="display:none;" onchange="importaDati(this)">
+                </label>
+            </div>
+        </div>
+
+        <div class="impostazioni-gruppo impostazioni-gruppo-danger">
+            <h3 class="impostazioni-titolo" style="color:#cc0000;">⚠️ Zona pericolosa</h3>
+            <div class="impostazioni-riga">
+                <div><strong>Cancella tutti i dati</strong><p>Elimina tutte le transazioni (non recuperabile)</p></div>
+                <button class="btn-impostazioni-danger" onclick="cancellaTransazioni()">🗑️ Cancella</button>
+            </div>
+            <div class="impostazioni-riga">
+                <div><strong>Reset completo</strong><p>Elimina tutto e torna alla configurazione iniziale</p></div>
+                <button class="btn-impostazioni-danger" onclick="resetCompleto()">💣 Reset</button>
+            </div>
+        </div>
+
+        <div class="app-version">Il Mio Budget v1.1 — dati salvati localmente sul dispositivo</div>
+    </div>
+</div>
+
+<!-- MODALE MODIFICA CAPITALE -->
+<div id="modale-capitale" class="modale-overlay" style="display:none;">
+    <div class="modale-box" style="max-width:400px;">
+        <div class="modale-header">
+            <span>💼 Capitale attuale</span>
+            <button class="btn-modale-chiudi" onclick="chiudiModaleCapitale()">✕</button>
+        </div>
+        <div style="padding:20px;">
+            <label>Inserisci il capitale che hai già investito/risparmiato</label>
+            <div class="importo-row" style="margin-top:8px;">
+                <span id="capitale-valuta-prefix" class="valuta-prefix">€</span>
+                <input type="number" id="capitale-input" placeholder="0.00" min="0" step="100">
+            </div>
+            <button class="btn-aggiungi" style="margin-top:16px;" onclick="salvaCapitale()">💾 Salva</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE MODIFICA GIORNO -->
+<div id="modale-giorno" class="modale-overlay" style="display:none;">
+    <div class="modale-box" style="max-width:420px;">
+        <div class="modale-header">
+            <span>📅 Giorno inizio mese</span>
+            <button class="btn-modale-chiudi" onclick="chiudiModaleGiorno()">✕</button>
+        </div>
+        <div style="padding:20px;">
+            <p style="color:#666; font-size:14px; margin-bottom:16px;">Seleziona il giorno del mese in cui ricevi lo stipendio.</p>
+            <div class="setup-giorno-griglia" id="griglia-giorni-imp"></div>
+            <button class="btn-aggiungi" style="margin-top:16px;" onclick="salvaGiorno()">💾 Salva</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODALE MODIFICA VALUTA -->
+<div id="modale-valuta" class="modale-overlay" style="display:none;">
+    <div class="modale-box" style="max-width:400px;">
+        <div class="modale-header">
+            <span>💱 Valuta</span>
+            <button class="btn-modale-chiudi" onclick="chiudiModaleValuta()">✕</button>
+        </div>
+        <div style="padding:20px;">
+            <div class="setup-valute">
+                <button class="valuta-btn" data-valuta="€" data-codice="EUR" onclick="selezionaValutaImp(this)">€ Euro</button>
+                <button class="valuta-btn" data-valuta="$" data-codice="USD" onclick="selezionaValutaImp(this)">$ Dollaro</button>
+                <button class="valuta-btn" data-valuta="£" data-codice="GBP" onclick="selezionaValutaImp(this)">£ Sterlina</button>
+                <button class="valuta-btn" data-valuta="CHF" data-codice="CHF" onclick="selezionaValutaImp(this)">CHF Franco</button>
+            </div>
+            <button class="btn-aggiungi" style="margin-top:16px;" onclick="salvaValuta()">💾 Salva</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

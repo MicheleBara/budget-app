@@ -1,0 +1,802 @@
+/* ========================
+   BASE
+======================== */
+* { box-sizing: border-box; }
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f4f8;
+    color: #333;
+    -webkit-text-size-adjust: 100%;
+}
+
+/* ========================
+   HEADER E NAVIGAZIONE
+======================== */
+header {
+    background-color: #7c2ce5;
+    color: white;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+header h1 { margin: 0; font-size: 20px; cursor: pointer; transition: opacity 0.2s; }
+header h1:hover { opacity: 0.8; }
+nav { display: flex; gap: 8px; flex-wrap: wrap; }
+.nav-btn {
+    padding: 8px 18px;
+    border: 2px solid white;
+    border-radius: 20px;
+    background-color: transparent;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    min-height: 44px;
+    transition: all 0.2s;
+}
+.nav-btn.attivo, .nav-btn:hover { background-color: white; color: #7c2ce5; }
+
+/* ========================
+   LAYOUT SIDEBAR DASHBOARD
+======================== */
+.layout-sidebar {
+    display: flex;
+    height: calc(100vh - 60px);
+}
+
+aside#sidebar-mesi {
+    width: 220px;
+    min-width: 190px;
+    background-color: white;
+    border-right: 1px solid #e0e0e0;
+    padding: 16px;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+aside#sidebar-mesi h3 {
+    margin: 0 0 14px 0;
+    font-size: 13px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.sidebar-mese-card {
+    padding: 10px 12px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    border: 1px solid #e0e0e0;
+    background-color: #f8faff;
+    transition: all 0.2s;
+}
+.sidebar-mese-card:hover { background-color: #e8f0fe; border-color: #7c2ce5; }
+.sidebar-mese-card.selezionato { background-color: #7c2ce5; border-color: #7c2ce5; color: white; }
+.sidebar-mese-card h4 { margin: 0 0 3px 0; font-size: 13px; }
+.sidebar-mese-card p { margin: 0; font-size: 11px; opacity: 0.7; }
+.sidebar-mese-card.selezionato p { opacity: 0.85; }
+
+.sidebar-mese-saldo {
+    font-size: 12px;
+    font-weight: bold;
+    margin-top: 3px;
+}
+.saldo-pos { color: #2e7d32; }
+.saldo-neg { color: #cc0000; }
+.sidebar-mese-card.selezionato .saldo-pos,
+.sidebar-mese-card.selezionato .saldo-neg { color: rgba(255,255,255,0.9); }
+
+#selettore-mobile-mesi { display: none; }
+
+#dashboard-main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+}
+
+/* ========================
+   VISTA ALTRE SEZIONI
+======================== */
+.vista-contenuto {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 20px;
+}
+.vista-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.vista-header-row h2 { margin: 0; font-size: 22px; color: #333; }
+
+/* ========================
+   MODALI
+======================== */
+.modale-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
+}
+.modale-box {
+    background-color: white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+.modale-setup-box { padding: 32px 28px; text-align: center; }
+.setup-logo { font-size: 56px; margin-bottom: 12px; }
+.modale-setup-box h2 { margin: 0 0 8px 0; color: #7c2ce5; font-size: 22px; }
+.setup-sottotitolo { color: #888; font-size: 14px; margin: 0 0 28px 0; }
+.setup-step h3 { margin: 0 0 6px 0; font-size: 17px; color: #333; }
+.setup-desc { color: #888; font-size: 13px; margin: 0 0 20px 0; }
+.setup-step-label {
+    display: inline-block;
+    background-color: #e8f0fe;
+    color: #7c2ce5;
+    border-radius: 12px;
+    padding: 3px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 12px;
+}
+.modale-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    font-weight: bold;
+    font-size: 15px;
+    gap: 12px;
+}
+.btn-modale-chiudi {
+    padding: 8px 12px;
+    background-color: #f0f0f0;
+    color: #333;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    min-height: 36px;
+}
+.btn-modale-chiudi:hover { background-color: #ddd; }
+
+/* Griglia giorni */
+.setup-giorno-griglia {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+.giorno-btn {
+    padding: 10px 4px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    background-color: #f8faff;
+    color: #333;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.15s;
+    min-height: 44px;
+}
+.giorno-btn:hover { border-color: #7c2ce5; background-color: #f0e8ff; }
+.giorno-btn.selezionato { background-color: #7c2ce5; border-color: #7c2ce5; color: white; }
+
+/* Valute */
+.setup-valute { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.valuta-btn {
+    padding: 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    background-color: #f8faff;
+    color: #333;
+    font-size: 15px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.15s;
+}
+.valuta-btn:hover { border-color: #7c2ce5; background-color: #f0e8ff; }
+.valuta-btn.attivo { background-color: #7c2ce5; border-color: #7c2ce5; color: white; }
+
+/* Setup azioni */
+.setup-azioni { display: flex; gap: 12px; flex-direction: column; }
+.btn-setup-primario {
+    padding: 14px;
+    background-color: #7c2ce5;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.btn-setup-primario:hover { background-color: #6020c0; }
+.btn-setup-secondario {
+    padding: 12px;
+    background-color: #f0f0f0;
+    color: #555;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    cursor: pointer;
+}
+.btn-setup-secondario:hover { background-color: #e0e0e0; }
+
+/* ========================
+   DASHBOARD
+======================== */
+.periodo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: white;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+    border: 1px solid #e0e0e0;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+.periodo-label { font-size: 11px; text-transform: uppercase; color: #999; letter-spacing: 0.5px; margin-bottom: 4px; }
+.periodo-testo { font-size: 15px; font-weight: bold; color: #333; }
+.giorni-rimasti-box { text-align: right; }
+.giorni-numero { font-size: 28px; font-weight: bold; color: #7c2ce5; line-height: 1; }
+.giorni-label { font-size: 11px; color: #999; margin-top: 2px; }
+
+.saldo-card {
+    background: linear-gradient(135deg, #7c2ce5 0%, #5a1daa 100%);
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 16px;
+    color: white;
+    box-shadow: 0 4px 16px rgba(124,44,229,0.3);
+}
+.saldo-label { font-size: 13px; opacity: 0.8; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.saldo-valore { font-size: 36px; font-weight: bold; margin-bottom: 16px; line-height: 1; }
+.saldo-barra-wrap { background-color: rgba(255,255,255,0.25); border-radius: 4px; height: 6px; margin-bottom: 12px; overflow: hidden; }
+.saldo-barra-inner { height: 100%; background-color: white; border-radius: 4px; transition: width 0.5s ease; min-width: 4px; }
+.saldo-sub { display: flex; justify-content: space-between; font-size: 13px; opacity: 0.9; flex-wrap: wrap; gap: 8px; }
+
+.kpi-griglia { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 20px; }
+.kpi-card { border-radius: 12px; padding: 16px; text-align: center; }
+.kpi-verde { background-color: #e8f8f0; border: 1px solid #b8e8ce; }
+.kpi-rosso { background-color: #fdf0f0; border: 1px solid #f5c6c6; }
+.kpi-viola { background-color: #f0e8ff; border: 1px solid #d0b8f5; }
+.kpi-icona { font-size: 24px; margin-bottom: 6px; }
+.kpi-valore { font-size: 16px; font-weight: bold; color: #333; margin-bottom: 2px; }
+.kpi-label { font-size: 11px; color: #888; }
+
+/* Grafici a coppie nella dashboard storica */
+.grafici-row { display: flex; gap: 16px; flex-wrap: wrap; }
+.grafico-metà { flex: 1; min-width: 200px; }
+.grafico-wrapper-piccolo { position: relative; height: 160px; }
+
+.sezione-titolo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.sezione-titolo-row h3 { margin: 0; font-size: 15px; color: #333; }
+.bottoni-aggiunta-group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn-aggiungi-piccolo {
+    padding: 6px 14px;
+    background-color: #e8f8f0;
+    color: #2e7d32;
+    border: 1px solid #b8e8ce;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    min-height: 36px;
+}
+.btn-aggiungi-piccolo:hover { background-color: #2e7d32; color: white; }
+.btn-aggiungi-piccolo.btn-rosso { background-color: #fdf0f0; color: #cc0000; border-color: #f5c6c6; }
+.btn-aggiungi-piccolo.btn-rosso:hover { background-color: #cc0000; color: white; }
+
+/* ========================
+   TRANSAZIONI
+======================== */
+.transazione-card {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.transazione-icona {
+    font-size: 22px;
+    flex-shrink: 0;
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    background-color: #f0f4f8;
+}
+.transazione-info { flex: 1; min-width: 0; }
+.transazione-desc { font-weight: bold; font-size: 14px; color: #333; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.transazione-meta { font-size: 11px; color: #999; }
+.transazione-importo { font-weight: bold; font-size: 15px; white-space: nowrap; flex-shrink: 0; }
+.importo-entrata { color: #2e7d32; }
+.importo-uscita { color: #cc0000; }
+.btn-elimina-piccolo {
+    background-color: #ffe0e0; color: #cc0000;
+    border: none; border-radius: 8px;
+    padding: 6px 10px; cursor: pointer;
+    font-size: 12px; white-space: nowrap;
+    min-height: 36px; flex-shrink: 0;
+}
+.btn-elimina-piccolo:hover { background-color: #cc0000; color: white; }
+
+/* ========================
+   GRAFICI
+======================== */
+.grafico-card {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+.grafico-card h4 { margin: 0 0 16px 0; font-size: 14px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+.grafico-wrapper { position: relative; height: 220px; display: flex; align-items: center; justify-content: center; }
+.grafico-wrapper-alto { position: relative; height: 280px; }
+.legenda-custom { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+.legenda-voce-custom {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: #555;
+    padding: 4px 8px; background-color: #f8f9fa; border-radius: 8px;
+}
+.legenda-dot-custom { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* ========================
+   FORM
+======================== */
+.form-card { padding: 16px 20px 20px; }
+label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-top: 14px; margin-bottom: 4px; }
+
+input[type="text"],
+input[type="date"],
+input[type="number"],
+select {
+    width: 100%; padding: 10px;
+    border: 1px solid #ccc; border-radius: 8px;
+    font-size: 16px; box-sizing: border-box;
+    background-color: white;
+    font-family: Arial, sans-serif;
+    min-height: 44px;
+    -webkit-appearance: none; appearance: none;
+}
+
+.importo-row {
+    display: flex; align-items: center; gap: 0;
+    border: 1px solid #ccc; border-radius: 8px;
+    overflow: hidden; background-color: white;
+}
+.valuta-prefix {
+    padding: 10px 12px;
+    background-color: #f0f4f8;
+    font-size: 15px; font-weight: bold; color: #555;
+    border-right: 1px solid #ccc; flex-shrink: 0;
+}
+.importo-row input[type="number"] { border: none; border-radius: 0; flex: 1; min-width: 0; }
+.importo-row input[type="number"]:focus { outline: none; box-shadow: none; }
+
+.btn-aggiungi {
+    margin-top: 16px; width: 100%; padding: 14px;
+    background-color: #7c2ce5; color: white;
+    border: none; border-radius: 8px;
+    font-size: 16px; cursor: pointer; min-height: 44px; font-weight: bold;
+}
+.btn-aggiungi:hover { background-color: #6020c0; }
+
+.btn-aggiungi-principale {
+    padding: 10px 20px; background-color: #7c2ce5; color: white;
+    border: none; border-radius: 20px;
+    font-size: 14px; cursor: pointer; min-height: 44px; font-weight: bold;
+}
+.btn-aggiungi-principale:hover { background-color: #6020c0; }
+
+.filtro-mese {
+    padding: 6px 10px; border: 1px solid #7c2ce5;
+    border-radius: 8px; font-size: 13px;
+    color: #7c2ce5; background-color: white;
+    cursor: pointer; min-height: 36px;
+    -webkit-appearance: none; appearance: none;
+}
+
+/* ========================
+   STATO VUOTO
+======================== */
+.vuoto-stato { text-align: center; padding: 40px 20px; color: #aaa; }
+.vuoto-icona { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+.vuoto-stato p { font-size: 14px; line-height: 1.6; color: #bbb; margin: 0; }
+
+/* ========================
+   SAVINGS
+======================== */
+.savings-capitale-card {
+    background: linear-gradient(135deg, #7c2ce5 0%, #5a1daa 100%);
+    color: white; border-radius: 16px; padding: 24px;
+    margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+    box-shadow: 0 4px 16px rgba(124,44,229,0.3);
+}
+.savings-capitale-label { font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.savings-capitale-valore { font-size: 32px; font-weight: bold; line-height: 1; }
+.btn-modifica-capitale {
+    padding: 8px 16px;
+    background-color: rgba(255,255,255,0.2);
+    color: white; border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 20px; font-size: 13px; cursor: pointer; min-height: 38px;
+}
+.btn-modifica-capitale:hover { background-color: rgba(255,255,255,0.35); }
+
+/* Simulatore */
+.simulatore-card {
+    background-color: white; border: 1px solid #e0e0e0;
+    border-radius: 12px; padding: 20px; margin-bottom: 20px;
+}
+.simulatore-card h3 { margin: 0 0 6px 0; font-size: 17px; color: #333; }
+.simulatore-desc { color: #888; font-size: 13px; margin: 0 0 20px 0; }
+
+/* Search asset */
+.sim-search-box { margin-bottom: 20px; }
+.sim-search-box label { margin-top: 0; }
+.sim-search-row { display: flex; gap: 8px; margin-top: 6px; }
+.sim-search-row input { flex: 1; }
+.btn-cerca-asset {
+    padding: 10px 16px;
+    background-color: #7c2ce5; color: white;
+    border: none; border-radius: 8px;
+    font-size: 14px; cursor: pointer;
+    min-height: 44px; white-space: nowrap; flex-shrink: 0;
+    display: flex; align-items: center; gap: 6px;
+}
+.btn-cerca-asset:hover { background-color: #6020c0; }
+.btn-cerca-asset:disabled { background-color: #bbb; cursor: not-allowed; }
+
+.sim-asset-risultato {
+    margin-top: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    background-color: #f8faff;
+}
+
+/* Box suggerimenti autocomplete */
+.sim-asset-suggerimenti {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 56px;
+    margin-top: 4px;
+    background-color: white;
+    border: 1px solid #d0b8f5;
+    border-radius: 10px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 50;
+}
+.suggerimento-asset {
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.15s;
+}
+.suggerimento-asset:last-child { border-bottom: none; }
+.suggerimento-asset:hover { background-color: #f0e8ff; }
+.suggerimento-nome { font-size: 13px; font-weight: bold; color: #333; }
+.suggerimento-meta { font-size: 11px; color: #888; margin-top: 1px; }
+
+.sim-asset-trovato {
+    padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+}
+.sim-asset-nome { font-weight: bold; font-size: 14px; color: #333; }
+.sim-asset-ticker { font-size: 12px; color: #888; margin-top: 2px; }
+.sim-asset-badge {
+    display: inline-block;
+    background-color: #e8f8f0;
+    color: #2e7d32;
+    border-radius: 8px;
+    padding: 4px 12px;
+    font-size: 13px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+.sim-asset-loading { padding: 14px 16px; color: #888; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.sim-asset-errore { padding: 14px 16px; color: #cc0000; font-size: 13px; }
+
+.sim-griglia { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.sim-campo label { margin-top: 0; font-size: 12px; color: #777; margin-bottom: 6px; }
+.sim-nota { font-size: 11px; color: #999; margin-top: 4px; font-style: italic; }
+
+.sim-risultato-kpi { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 16px; }
+.sim-kpi-card { border-radius: 12px; padding: 16px; text-align: center; }
+.sim-kpi-viola { background-color: #f0e8ff; border: 1px solid #d0b8f5; }
+.sim-kpi-grigio { background-color: #f5f5f5; border: 1px solid #e0e0e0; }
+.sim-kpi-verde { background-color: #e8f8f0; border: 1px solid #b8e8ce; }
+.sim-kpi-label { font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+.sim-kpi-valore { font-size: 16px; font-weight: bold; color: #333; }
+.sim-disclaimer { font-size: 11px; color: #bbb; margin-top: 12px; text-align: center; }
+
+/* Spinner */
+.spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ========================
+   IMPOSTAZIONI
+======================== */
+.impostazioni-gruppo {
+    background-color: white; border: 1px solid #e0e0e0;
+    border-radius: 12px; padding: 20px; margin-bottom: 16px;
+}
+.impostazioni-gruppo-danger { border-color: #ffb3b3; background-color: #fff8f8; }
+.impostazioni-titolo { margin: 0 0 16px 0; font-size: 15px; color: #333; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; }
+.impostazioni-desc { font-size: 13px; color: #666; margin: -8px 0 16px 0; }
+.impostazioni-riga {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid #f5f5f5; gap: 16px; flex-wrap: wrap;
+}
+.impostazioni-riga:last-child { border-bottom: none; padding-bottom: 0; }
+.impostazioni-riga strong { display: block; font-size: 14px; color: #333; }
+.impostazioni-riga p { margin: 4px 0 0 0; font-size: 12px; color: #999; }
+.btn-impostazioni-azione {
+    padding: 8px 16px; background-color: #e8f0fe; color: #2c7be5;
+    border: none; border-radius: 8px; font-size: 13px; cursor: pointer;
+    white-space: nowrap; min-height: 36px;
+    display: inline-flex; align-items: center; text-decoration: none;
+}
+.btn-impostazioni-azione:hover { background-color: #2c7be5; color: white; }
+.btn-impostazioni-danger {
+    padding: 8px 16px; background-color: #ffe0e0; color: #cc0000;
+    border: none; border-radius: 8px; font-size: 13px; cursor: pointer;
+    white-space: nowrap; min-height: 36px;
+}
+.btn-impostazioni-danger:hover { background-color: #cc0000; color: white; }
+
+/* Categorie */
+.categorie-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.cat-tab {
+    padding: 6px 16px; border: 1px solid #7c2ce5; border-radius: 20px;
+    background-color: white; color: #7c2ce5; font-size: 13px; cursor: pointer; min-height: 34px;
+}
+.cat-tab.attivo, .cat-tab:hover { background-color: #7c2ce5; color: white; }
+
+.lista-categorie { margin-bottom: 12px; }
+.categoria-voce {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 12px;
+    background-color: #f8faff; border: 1px solid #e0e0e0;
+    border-radius: 8px; margin-bottom: 6px; font-size: 13px;
+}
+.categoria-voce .cat-azioni { display: flex; align-items: center; gap: 4px; }
+.btn-modifica-cat {
+    background: none; border: none; cursor: pointer;
+    padding: 4px 6px; font-size: 14px; border-radius: 4px;
+    color: #7c2ce5;
+}
+.btn-modifica-cat:hover { background-color: #e8f0fe; }
+.btn-rimuovi-cat {
+    background: none; border: none; color: #cc0000;
+    cursor: pointer; padding: 4px 6px; font-size: 14px; border-radius: 4px;
+}
+.btn-rimuovi-cat:hover { background-color: #ffe0e0; }
+
+/* Edit inline categoria */
+.cat-edit-row {
+    display: flex; gap: 6px; align-items: center; width: 100%;
+}
+.cat-edit-row input {
+    flex: 1; padding: 6px 10px; font-size: 13px;
+    border: 1px solid #7c2ce5; border-radius: 6px;
+    min-height: 34px;
+}
+.btn-cat-salva {
+    padding: 6px 12px; background-color: #7c2ce5; color: white;
+    border: none; border-radius: 6px; font-size: 12px; cursor: pointer;
+    min-height: 34px; white-space: nowrap;
+}
+.btn-cat-annulla {
+    padding: 6px 10px; background-color: #f0f0f0; color: #555;
+    border: none; border-radius: 6px; font-size: 12px; cursor: pointer;
+    min-height: 34px;
+}
+
+.aggiungi-categoria-row { display: flex; gap: 8px; margin-top: 8px; }
+.aggiungi-categoria-row input { flex: 1; }
+.btn-aggiungi-cat {
+    padding: 10px 18px; background-color: #7c2ce5; color: white;
+    border: none; border-radius: 8px; font-size: 18px; cursor: pointer;
+    min-height: 44px; font-weight: bold;
+}
+.btn-aggiungi-cat:hover { background-color: #6020c0; }
+
+.app-version { text-align: center; font-size: 11px; color: #ccc; margin-top: 24px; padding-bottom: 24px; }
+
+/* ========================
+   TABLET (max-width: 768px)
+======================== */
+@media (max-width: 768px) {
+    header { padding: 10px 14px; }
+    header h1 { font-size: 17px; }
+    .nav-btn { padding: 7px 12px; font-size: 13px; }
+    aside#sidebar-mesi { width: 180px; min-width: 160px; padding: 12px; }
+    #dashboard-main { padding: 16px; }
+    .sim-griglia { grid-template-columns: 1fr; }
+    .sim-risultato-kpi { grid-template-columns: 1fr; gap: 8px; }
+    .grafico-wrapper { height: 200px; }
+}
+
+/* ========================
+   MOBILE (max-width: 480px)
+======================== */
+@media (max-width: 480px) {
+    header { padding: 10px 12px; gap: 6px; }
+    header h1 { font-size: 16px; }
+    nav { width: 100%; justify-content: center; }
+    .nav-btn { padding: 6px 8px; font-size: 11px; flex: 1; text-align: center; min-height: 40px; }
+
+    /* Sidebar nascosta su mobile → dropdown */
+    aside#sidebar-mesi { display: none; }
+    #selettore-mobile-mesi {
+        display: block;
+        padding: 10px 12px;
+        background-color: white;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    #selettore-mobile-mesi select {
+        width: 100%; padding: 10px;
+        border: 1px solid #7c2ce5; border-radius: 8px;
+        font-size: 15px; background-color: #f0f6ff;
+        color: #7c2ce5; font-weight: bold;
+    }
+
+    .layout-sidebar { flex-direction: column; height: auto; min-height: calc(100vh - 110px); }
+    #dashboard-main { padding: 12px; }
+
+    .saldo-valore { font-size: 28px; }
+    .kpi-griglia { gap: 6px; }
+    .kpi-card { padding: 10px 6px; }
+    .kpi-icona { font-size: 18px; }
+    .kpi-valore { font-size: 12px; }
+    .kpi-label { font-size: 9px; }
+
+    .setup-giorno-griglia { grid-template-columns: repeat(5,1fr); gap: 6px; }
+    .giorno-btn { font-size: 12px; padding: 8px 2px; }
+
+    .sim-griglia { grid-template-columns: 1fr; }
+    .sim-risultato-kpi { grid-template-columns: 1fr; }
+    .periodo-header { flex-direction: column; align-items: flex-start; }
+    .giorni-rimasti-box { text-align: left; }
+
+    .transazione-card { padding: 10px 12px; gap: 8px; }
+    .savings-capitale-card { flex-direction: column; }
+    .savings-capitale-valore { font-size: 28px; }
+
+    .grafico-wrapper { height: 180px; }
+    .grafico-wrapper-alto { height: 220px; }
+    .grafico-wrapper-piccolo { height: 130px; }
+    .grafici-row { flex-direction: column; }
+
+    .vista-contenuto { padding: 12px; }
+}
+
+/* ========================
+   DARK MODE
+======================== */
+body.dark-mode { background-color: #1a1a2e; color: #e0e0e0; }
+body.dark-mode header { background-color: #16213e; }
+
+body.dark-mode aside#sidebar-mesi {
+    background-color: #16213e; border-color: #2a2a4a;
+}
+body.dark-mode aside#sidebar-mesi h3 { color: #888; }
+body.dark-mode .sidebar-mese-card { background-color: #1a1a2e; border-color: #2a2a4a; color: #e0e0e0; }
+body.dark-mode .sidebar-mese-card:hover { background-color: #0f3460; border-color: #7c2ce5; }
+body.dark-mode .sidebar-mese-card.selezionato { background-color: #7c2ce5; }
+
+body.dark-mode .periodo-header,
+body.dark-mode .grafico-card,
+body.dark-mode .simulatore-card,
+body.dark-mode .impostazioni-gruppo,
+body.dark-mode .modale-box { background-color: #16213e; border-color: #2a2a4a; }
+body.dark-mode .modale-header { border-color: #2a2a4a; }
+
+body.dark-mode .transazione-card,
+body.dark-mode .categoria-voce { background-color: #16213e; border-color: #2a2a4a; color: #e0e0e0; }
+body.dark-mode .transazione-desc { color: #e0e0e0; }
+body.dark-mode .transazione-meta { color: #888; }
+
+body.dark-mode input[type="text"],
+body.dark-mode input[type="date"],
+body.dark-mode input[type="number"],
+body.dark-mode select { background-color: #1a1a2e; border-color: #2a2a4a; color: #e0e0e0; }
+body.dark-mode .importo-row { border-color: #2a2a4a; background-color: #1a1a2e; }
+body.dark-mode .valuta-prefix { background-color: #16213e; border-color: #2a2a4a; color: #aaa; }
+body.dark-mode label { color: #aaa; }
+
+body.dark-mode .kpi-verde { background-color: #0a2018; border-color: #1a4030; }
+body.dark-mode .kpi-rosso { background-color: #200a0a; border-color: #401818; }
+body.dark-mode .kpi-viola { background-color: #1a0a30; border-color: #3a1a5a; }
+body.dark-mode .kpi-valore { color: #e0e0e0; }
+body.dark-mode .kpi-label { color: #777; }
+
+body.dark-mode .sim-kpi-viola { background-color: #1a0a30; border-color: #3a1a5a; }
+body.dark-mode .sim-kpi-grigio { background-color: #16213e; border-color: #2a2a4a; }
+body.dark-mode .sim-kpi-verde { background-color: #0a2018; border-color: #1a4030; }
+body.dark-mode .sim-kpi-valore { color: #e0e0e0; }
+
+body.dark-mode .periodo-testo { color: #e0e0e0; }
+body.dark-mode .giorni-numero { color: #a070ff; }
+body.dark-mode .impostazioni-titolo { color: #e0e0e0; border-color: #2a2a4a; }
+body.dark-mode .impostazioni-riga { border-color: #2a2a4a; }
+body.dark-mode .impostazioni-riga strong { color: #e0e0e0; }
+body.dark-mode .impostazioni-riga p { color: #666; }
+
+body.dark-mode .cat-tab { background-color: #16213e; color: #a070ff; border-color: #a070ff; }
+body.dark-mode .cat-tab.attivo, body.dark-mode .cat-tab:hover { background-color: #7c2ce5; color: white; }
+
+body.dark-mode .vuoto-stato p { color: #555; }
+
+body.dark-mode .giorno-btn { background-color: #16213e; border-color: #2a2a4a; color: #e0e0e0; }
+body.dark-mode .giorno-btn:hover { border-color: #a070ff; background-color: #2a1060; }
+body.dark-mode .giorno-btn.selezionato { background-color: #7c2ce5; border-color: #7c2ce5; color: white; }
+
+body.dark-mode .valuta-btn { background-color: #16213e; border-color: #2a2a4a; color: #e0e0e0; }
+body.dark-mode .valuta-btn.attivo { background-color: #7c2ce5; border-color: #7c2ce5; color: white; }
+
+body.dark-mode .impostazioni-gruppo-danger { background-color: #2a1616; border-color: #cc0000; }
+body.dark-mode .filtro-mese { background-color: #1a1a2e; border-color: #a070ff; color: #a070ff; }
+body.dark-mode .legenda-voce-custom { background-color: #1a1a2e; color: #aaa; }
+body.dark-mode .app-version { color: #444; }
+body.dark-mode .simulatore-card h3, body.dark-mode .grafico-card h4 { color: #e0e0e0; }
+body.dark-mode .sim-asset-risultato { background-color: #1a1a2e; border-color: #2a2a4a; }
+body.dark-mode .sim-asset-nome { color: #e0e0e0; }
+body.dark-mode .sim-asset-suggerimenti { background-color: #16213e; border-color: #7c2ce5; }
+body.dark-mode .suggerimento-asset { border-color: #2a2a4a; }
+body.dark-mode .suggerimento-asset:hover { background-color: #2a1060; }
+body.dark-mode .suggerimento-nome { color: #e0e0e0; }
+body.dark-mode .suggerimento-meta { color: #888; }
+body.dark-mode #selettore-mobile-mesi { background-color: #16213e; border-color: #2a2a4a; }
+body.dark-mode #selettore-mobile-mesi select { background-color: #16213e; color: #a070ff; border-color: #7c2ce5; }
+body.dark-mode .saldo-pos { color: #4caf50; }
+body.dark-mode .saldo-neg { color: #ff6b6b; }
