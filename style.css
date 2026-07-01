@@ -575,7 +575,141 @@ select {
 .sim-kpi-valore { font-size: 16px; font-weight: bold; color: #333; }
 .sim-disclaimer { font-size: 11px; color: #bbb; margin-top: 12px; text-align: center; }
 
-/* Spinner */
+/* ========================
+   SAVINGS MULTI-PORTAFOGLIO
+======================== */
+.savings-totale-card {
+    background: linear-gradient(135deg, #7c2ce5 0%, #5a1daa 100%);
+    color: white;
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    box-shadow: 0 4px 16px rgba(124,44,229,0.3);
+}
+.savings-totale-left {}
+.savings-totale-right {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+    justify-content: flex-end;
+}
+.savings-kpi-mini {
+    background-color: rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 7px 12px;
+    min-width: 100px;
+    text-align: right;
+}
+.savings-kpi-mini-nome {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-bottom: 2px;
+    white-space: nowrap;
+}
+.savings-kpi-mini-val {
+    font-size: 13px;
+    font-weight: bold;
+}
+.savings-kpi-mini-pct {
+    font-size: 11px;
+    opacity: 0.7;
+    font-weight: normal;
+}
+
+/* Card singolo portafoglio */
+.portafoglio-card {
+    background-color: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 14px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+.portafoglio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-left: 12px;
+    margin-bottom: 14px;
+    gap: 12px;
+}
+.portafoglio-header-left { flex: 1; min-width: 0; }
+.portafoglio-nome {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 2px;
+}
+.portafoglio-asset-tag {
+    font-size: 12px;
+    color: #888;
+}
+.portafoglio-header-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+.portafoglio-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.portafoglio-kpi {
+    background-color: #f8faff;
+    border-radius: 10px;
+    padding: 10px 12px;
+    text-align: center;
+}
+.portafoglio-kpi-label {
+    font-size: 10px;
+    color: #999;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 4px;
+}
+.portafoglio-kpi-valore {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+}
+.portafoglio-kpi-sub {
+    font-size: 10px;
+    color: #bbb;
+    margin-top: 2px;
+}
+.portafoglio-kpi-verde { color: #2e7d32; }
+.portafoglio-kpi-viola { color: #7c2ce5; }
+.portafoglio-grafico-wrap {
+    height: 140px;
+    margin: 0 -4px;
+}
+
+/* Dark mode portafogli */
+body.dark-mode .portafoglio-card { background-color: #16213e; border-color: #2a2a4a; }
+body.dark-mode .portafoglio-nome { color: #e0e0e0; }
+body.dark-mode .portafoglio-asset-tag { color: #888; }
+body.dark-mode .portafoglio-kpi { background-color: #1a1a2e; }
+body.dark-mode .portafoglio-kpi-valore { color: #e0e0e0; }
+body.dark-mode .savings-totale-card { background: linear-gradient(135deg, #7c2ce5 0%, #3a1080 100%); }
+
+/* Mobile portafogli */
+@media (max-width: 480px) {
+    .portafoglio-kpi-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .portafoglio-kpi-row .portafoglio-kpi:last-child { grid-column: 1 / -1; }
+    .savings-totale-card { flex-direction: column; }
+    .savings-totale-right { justify-content: flex-start; width: 100%; }
+    .savings-kpi-mini { min-width: 80px; }
+}
+
+/* Campo portafoglio nel form voce */
+#voce-portafoglio-row { margin-top: 14px; }
 .spinner {
     width: 16px; height: 16px;
     border: 2px solid rgba(255,255,255,0.4);

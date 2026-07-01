@@ -8,10 +8,11 @@ let stato = {
     giornoFiscale: 1,
     valuta: '€',
     valutaCodice: 'EUR',
-    capitale: 0,
+    capitale: 0,          // mantenuto per retrocompatibilità
+    portafogli: [],        // [{id, nome, assetNome, assetTicker, rendimento, periodo, capitaleBase, contributoMensile, anni}]
     transazioni: [],
-    categorieCustom: {   // sostituisce categorieExtra, gestisce sia default rinominati che nuovi
-        entrata: [],     // [{id, nome, nomeOriginale}] — nomeOriginale=null se è nuova
+    categorieCustom: {
+        entrata: [],
         uscita:  []
     }
 };
@@ -61,6 +62,9 @@ const DATABASE_ASSET = [
 ];
 
 let suggerimentiAssetVisibili = false;
+let assetTrovatoPortafoglio = null;  // asset selezionato nel modale portafoglio
+let chartRiepilogo = null;
+const COLORI_PORTAFOGLI = ['#7c2ce5','#2c7be5','#e53935','#43a047','#fb8c00','#00897b','#8e24aa','#d81b60'];
 
 let chartEntrate = null;
 let chartUscite  = null;
@@ -225,7 +229,7 @@ function mostraVista(id) {
     if (id === 'vista-dashboard')    renderDashboard();
     if (id === 'vista-entrate')      renderEntrate();
     if (id === 'vista-uscite')       renderUscite();
-    if (id === 'vista-savings')      renderSavings();
+    if (id === 'vista-savings')      { renderSavings(); setTimeout(renderGraficiPortafogli, 80); }
     if (id === 'vista-impostazioni') renderImpostazioni();
 }
 function tornaAllaHome() { mostraVista('vista-dashboard'); }
@@ -585,6 +589,99 @@ function nascondiSuggerimentiAsset() {
     }, 120);
 }
 
+// Autocomplete per il modale portafoglio
+function onInputAssetPortafoglio() {
+    const query = document.getElementById('portafoglio-asset-query').value;
+    const box   = document.getElementById('portafoglio-asset-suggerimenti');
+    if (!box) return;
+    if (!query.trim()) { box.style.display = 'none'; return; }
+    const match = cercaNelDatabase(query);
+    if (match.length === 0) { box.style.display = 'none'; return; }
+    box.innerHTML = match.map(a => `
+        <div class="suggerimento-asset" onmousedown="selezionaSuggerimentoPortafoglio('${escAttr(a.nome)}')">
+            <div class="suggerimento-nome">${escHTML(a.nome)}</div>
+            <div class="suggerimento-meta">${escHTML(a.ticker)} · ~${a.rendimento}%/anno</div>
+        </div>`).join('');
+    box.style.display = 'block';
+}
+
+function nascondiSuggerimentiPortafoglio() {
+    setTimeout(() => {
+        const box = document.getElementById('portafoglio-asset-suggerimenti');
+        if (box) box.style.display = 'none';
+    }, 120);
+}
+
+function selezionaSuggerimentoPortafoglio(nome) {
+    document.getElementById('portafoglio-asset-query').value = nome;
+    const box = document.getElementById('portafoglio-asset-suggerimenti');
+    if (box) box.style.display = 'none';
+    cercaAssetPortafoglio();
+}
+
+async function cercaAssetPortafoglio() {
+    const query = document.getElementById('portafoglio-asset-query').value.trim();
+    if (!query) return;
+    const risultato = document.getElementById('portafoglio-asset-risultato');
+    const matchLocale = cercaNelDatabase(query).find(a =>
+        a.nome.toLowerCase() === query.toLowerCase() || a.tags.includes(query.toLowerCase())
+    ) || cercaNelDatabase(query)[0];
+
+    if (matchLocale) {
+        assetTrovatoPortafoglio = matchLocale;
+        document.getElementById('portafoglio-rendimento').value = matchLocale.rendimento;
+        document.getElementById('portafoglio-rendimento-nota').textContent =
+            `📊 ${matchLocale.nome} — media ${matchLocale.periodo}: ${matchLocale.rendimento}% annuo`;
+        risultato.style.display = 'block';
+        risultato.innerHTML = `<div class="sim-asset-trovato">
+            <div>
+                <div class="sim-asset-nome">${escHTML(matchLocale.nome)}</div>
+                <div class="sim-asset-ticker">${escHTML(matchLocale.ticker)} · ${escHTML(matchLocale.note)}</div>
+            </div>
+            <div class="sim-asset-badge">📈 ${matchLocale.rendimento}% / anno<br><small style="font-weight:normal;font-size:10px;">${escHTML(matchLocale.periodo)}</small></div>
+        </div>`;
+        return;
+    }
+
+    // Fallback Claude API
+    const btn = document.getElementById('btn-cerca-asset-p');
+    btn.disabled = true;
+    document.getElementById('cerca-asset-txt-p').innerHTML = '<div class="spinner"></div>';
+    risultato.style.display = 'block';
+    risultato.innerHTML = '<div class="sim-asset-loading"><div class="spinner" style="border-color:rgba(124,44,229,0.3);border-top-color:#7c2ce5;"></div> Ricerca in corso...</div>';
+    try {
+        const risposta = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model: 'claude-sonnet-4-6', max_tokens: 300,
+                system: `Rispondi SOLO con JSON valido senza markdown:
+{"trovato":bool,"nome":"nome completo","ticker":"sigla","rendimento_annuo_medio":numero,"periodo_riferimento":"es. 2000-2024","note":"max 80 char"}`,
+                messages: [{ role: 'user', content: `Asset: "${query}"` }]
+            })
+        });
+        const data = await risposta.json();
+        const testo = data.content?.find(b => b.type==='text')?.text || '';
+        const info  = JSON.parse(testo.replace(/```json|```/g,'').trim());
+        if (info.trovato) {
+            assetTrovatoPortafoglio = { nome:info.nome, ticker:info.ticker, rendimento:info.rendimento_annuo_medio, periodo:info.periodo_riferimento, note:info.note, tags:[] };
+            document.getElementById('portafoglio-rendimento').value = info.rendimento_annuo_medio;
+            document.getElementById('portafoglio-rendimento-nota').textContent = `📊 ${info.nome} — ${info.periodo_riferimento}: ${info.rendimento_annuo_medio}% annuo`;
+            risultato.innerHTML = `<div class="sim-asset-trovato">
+                <div><div class="sim-asset-nome">${escHTML(info.nome)}</div><div class="sim-asset-ticker">${escHTML(info.ticker)}</div></div>
+                <div class="sim-asset-badge">📈 ${info.rendimento_annuo_medio}% / anno</div></div>`;
+        } else {
+            risultato.innerHTML = `<div class="sim-asset-errore">❌ Asset non riconosciuto. Prova con il ticker ufficiale.</div>`;
+            assetTrovatoPortafoglio = null;
+        }
+    } catch {
+        risultato.innerHTML = `<div class="sim-asset-errore">⚠️ Inserisci manualmente il rendimento.</div>`;
+        assetTrovatoPortafoglio = null;
+    }
+    btn.disabled = false;
+    document.getElementById('cerca-asset-txt-p').textContent = '🔍 Cerca';
+}
+
 function selezionaSuggerimento(nome) {
     document.getElementById('sim-asset-query').value = nome;
     const box = document.getElementById('sim-asset-suggerimenti');
@@ -694,106 +791,322 @@ Se l'asset non è riconoscibile, metti trovato:false e gli altri campi null. Usa
     document.getElementById('cerca-asset-txt').textContent = '🔍 Cerca';
 }
 
-// Calcola il totale investito: capitale base + tutte le uscite "Investimento"
+// ========================
+// SAVINGS — MULTI-PORTAFOGLIO
+// ========================
+
 function getCapitaleTotale() {
-    const investimenti = stato.transazioni
-        .filter(t => t.tipo === 'uscita' && t.categoria === 'Investimento')
-        .reduce((s, t) => s + t.importo, 0);
-    return (stato.capitale || 0) + investimenti;
+    // Somma capitale base di tutti i portafogli + versamenti collegati
+    if (!stato.portafogli || stato.portafogli.length === 0) return 0;
+    return stato.portafogli.reduce((s, p) => s + getCapitalePortafoglio(p), 0);
 }
 
-function getCapitaleInvestimenti() {
-    return stato.transazioni
-        .filter(t => t.tipo === 'uscita' && t.categoria === 'Investimento')
-        .reduce((s, t) => s + t.importo, 0);
+function getCapitalePortafoglio(p) {
+    const versamenti = stato.transazioni
+        .filter(t => t.tipo==='uscita' && t.categoria==='Investimento' && t.portafoglioId===p.id)
+        .reduce((s,t) => s+t.importo, 0);
+    return (p.capitaleBase || 0) + versamenti;
+}
+
+function simulaPortafoglio(p) {
+    const cap  = getCapitalePortafoglio(p);
+    const r    = (p.rendimento / 100) / 12;
+    const mesi = (p.anni || 10) * 12;
+    const contrib = p.contributoMensile || 0;
+    const step = mesi > 120 ? 6 : 1;
+    const labels = [], totale = [], versato = [];
+    for (let m = 0; m <= mesi; m += step) {
+        const v = cap + contrib * m;
+        const val = r === 0 ? v : cap * Math.pow(1+r,m) + contrib * (Math.pow(1+r,m)-1)/r;
+        labels.push((m/12).toFixed(1)+'a');
+        totale.push(Math.round(val));
+        versato.push(Math.round(v));
+    }
+    return { labels, totale, versato };
 }
 
 function renderSavings() {
-    const base         = stato.capitale || 0;
-    const investimenti = getCapitaleInvestimenti();
-    const totale       = base + investimenti;
+    if (!stato.portafogli) stato.portafogli = [];
 
-    document.getElementById('savings-capitale-display').textContent = formatImporto(totale);
-    document.getElementById('capitale-valuta-prefix').textContent   = stato.valuta;
-    document.getElementById('sim-valuta-prefix').textContent        = stato.valuta;
-    document.getElementById('capitale-input').value                 = base;
+    // Prefissi valuta nel modale
+    document.querySelectorAll('.portafoglio-valuta-prefix').forEach(el => el.textContent = stato.valuta);
 
-    // Mostra il dettaglio base + versamenti se ci sono investimenti registrati
-    const dettaglio = document.getElementById('savings-capitale-dettaglio');
-    if (dettaglio) {
-        if (investimenti > 0) {
-            dettaglio.innerHTML = `
-                <span class="capitale-dettaglio-voce">Base: ${formatImporto(base)}</span>
-                <span class="capitale-dettaglio-sep">+</span>
-                <span class="capitale-dettaglio-voce capitale-dettaglio-verde">Versamenti: ${formatImporto(investimenti)}</span>`;
-            dettaglio.style.display = 'flex';
-        } else {
-            dettaglio.style.display = 'none';
-        }
+    // Totale globale
+    const totaleGlobale = getCapitaleTotale();
+    document.getElementById('savings-totale-display').textContent = formatImporto(totaleGlobale);
+
+    // KPI rapidi per portafoglio
+    const kpiCont = document.getElementById('savings-totale-kpi');
+    kpiCont.innerHTML = stato.portafogli.map(p => {
+        const cap = getCapitalePortafoglio(p);
+        const pct = totaleGlobale > 0 ? ((cap/totaleGlobale)*100).toFixed(0) : 0;
+        return `<div class="savings-kpi-mini">
+            <div class="savings-kpi-mini-nome">${escHTML(p.nome)}</div>
+            <div class="savings-kpi-mini-val">${formatImporto(cap)} <span class="savings-kpi-mini-pct">${pct}%</span></div>
+        </div>`;
+    }).join('');
+
+    // Lista portafogli
+    const lista = document.getElementById('lista-portafogli');
+    if (stato.portafogli.length === 0) {
+        lista.innerHTML = `<div class="vuoto-stato">
+            <div class="vuoto-icona">📈</div>
+            <p>Nessun portafoglio ancora.<br>Aggiungi il primo con il bottone "+ Portafoglio".</p>
+        </div>`;
+    } else {
+        lista.innerHTML = stato.portafogli.map((p, idx) => renderCardPortafoglio(p, idx)).join('');
     }
+
+    // Grafico riepilogativo (solo se ≥2 portafogli)
+    renderGraficoRiepilogo();
 }
 
-function calcolaSimulazione() {
-    const capitaleIniziale = getCapitaleTotale(); // usa il totale aggiornato
-    const contributo = parseFloat(document.getElementById('sim-contributo').value) || 0;
-    const rendAnnuo  = parseFloat(document.getElementById('sim-rendimento').value) / 100;
-    const anni       = parseInt(document.getElementById('sim-anni').value);
-    const assetNome  = assetTrovato ? assetTrovato.nome : (document.getElementById('sim-asset-query').value || 'Asset personalizzato');
+function renderCardPortafoglio(p, idx) {
+    const cap       = getCapitalePortafoglio(p);
+    const versamenti = stato.transazioni
+        .filter(t => t.tipo==='uscita' && t.categoria==='Investimento' && t.portafoglioId===p.id)
+        .reduce((s,t) => s+t.importo, 0);
+    const sim   = simulaPortafoglio(p);
+    const vf    = sim.totale[sim.totale.length-1];
+    const cv    = sim.versato[sim.versato.length-1];
+    const guadagno = vf - cv;
+    const colore = COLORI_PORTAFOGLI[idx % COLORI_PORTAFOGLI.length];
 
-    if (isNaN(rendAnnuo) || rendAnnuo < 0) { alert('Inserisci un rendimento annuo valido.'); return; }
+    return `<div class="portafoglio-card" id="pcard-${p.id}">
+        <div class="portafoglio-header" style="border-left:4px solid ${colore};">
+            <div class="portafoglio-header-left">
+                <div class="portafoglio-nome">${escHTML(p.nome)}</div>
+                <div class="portafoglio-asset-tag">${escHTML(p.assetNome || '—')}${p.assetTicker ? ' · '+escHTML(p.assetTicker) : ''} · ${p.rendimento}%/anno</div>
+            </div>
+            <div class="portafoglio-header-actions">
+                <button class="btn-modifica-cat" onclick="apriModalePortafoglio('${p.id}')" title="Modifica">✏️</button>
+                <button class="btn-rimuovi-cat" onclick="eliminaPortafoglio('${p.id}')" title="Elimina">✕</button>
+            </div>
+        </div>
+        <div class="portafoglio-kpi-row">
+            <div class="portafoglio-kpi">
+                <div class="portafoglio-kpi-label">Capitale attuale</div>
+                <div class="portafoglio-kpi-valore">${formatImporto(cap)}</div>
+                ${versamenti > 0 ? `<div class="portafoglio-kpi-sub">Base ${formatImporto(p.capitaleBase||0)} + versamenti ${formatImporto(versamenti)}</div>` : ''}
+            </div>
+            <div class="portafoglio-kpi">
+                <div class="portafoglio-kpi-label">Stima ${p.anni || 10} anni</div>
+                <div class="portafoglio-kpi-valore portafoglio-kpi-verde">${formatImporto(vf)}</div>
+            </div>
+            <div class="portafoglio-kpi">
+                <div class="portafoglio-kpi-label">Rendimento atteso</div>
+                <div class="portafoglio-kpi-valore portafoglio-kpi-viola">+${formatImporto(guadagno)}</div>
+            </div>
+        </div>
+        <div class="portafoglio-grafico-wrap">
+            <canvas id="chart-p-${p.id}" height="130"></canvas>
+        </div>
+        <p class="sim-disclaimer" style="margin:8px 0 0;">Contributo mensile: ${formatImporto(p.contributoMensile||0)} · ${p.anni||10} anni · ⚠️ Dato indicativo</p>
+    </div>`;
+}
 
-    const mesi = anni * 12;
-    const r    = rendAnnuo / 12;
-    const labelAnni = [], valoriTotale = [], valoriVersato = [];
-    const step = mesi > 120 ? 6 : 1;
-
-    for (let m = 0; m <= mesi; m += step) {
-        const versato = capitaleIniziale + contributo * m;
-        const valore  = r === 0 ? versato
-            : capitaleIniziale * Math.pow(1+r,m) + contributo * (Math.pow(1+r,m)-1)/r;
-        labelAnni.push((m/12).toFixed(1)+'a');
-        valoriTotale.push(Math.round(valore));
-        valoriVersato.push(Math.round(versato));
+function renderGraficoRiepilogo() {
+    const wrap = document.getElementById('grafico-riepilogo-wrap');
+    if (!stato.portafogli || stato.portafogli.length < 2) {
+        wrap.style.display = 'none';
+        return;
     }
+    wrap.style.display = 'block';
 
-    const vf = valoriTotale[valoriTotale.length-1];
-    const cv = valoriVersato[valoriVersato.length-1];
-    document.getElementById('sim-valore-finale').textContent     = formatImporto(vf);
-    document.getElementById('sim-capitale-versato').textContent  = formatImporto(cv);
-    document.getElementById('sim-rendimento-maturato').textContent = formatImporto(vf - cv);
-    document.getElementById('sim-grafico-titolo').textContent    = `${escHTML(assetNome)} — proiezione ${anni} anni`;
-    document.getElementById('risultato-simulazione').style.display = 'block';
+    // Usa l'orizzonte del portafoglio più lungo
+    const maxAnni = Math.max(...stato.portafogli.map(p => p.anni || 10));
+    const mesiMax = maxAnni * 12;
+    const step    = mesiMax > 120 ? 6 : 1;
+    const labels  = [];
+    for (let m = 0; m <= mesiMax; m += step) labels.push((m/12).toFixed(1)+'a');
 
-    if (chartSavings) chartSavings.destroy();
     const isDark    = document.body.classList.contains('dark-mode');
     const gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
     const tickColor = isDark ? '#888' : '#aaa';
 
-    chartSavings = new Chart(document.getElementById('grafico-savings'), {
+    const datasets = stato.portafogli.map((p, idx) => {
+        const colore = COLORI_PORTAFOGLI[idx % COLORI_PORTAFOGLI.length];
+        const sim = simulaPortafoglio({ ...p, anni: maxAnni });
+        return {
+            label: p.nome,
+            data: sim.totale,
+            borderColor: colore,
+            backgroundColor: colore + '18',
+            fill: true, tension: 0.3, borderWidth: 2, pointRadius: 0
+        };
+    });
+
+    // Dataset somma totale
+    const somma = labels.map((_, i) => {
+        return stato.portafogli.reduce((s, p) => {
+            const sim = simulaPortafoglio({ ...p, anni: maxAnni });
+            return s + (sim.totale[i] || sim.totale[sim.totale.length-1]);
+        }, 0);
+    });
+    datasets.push({
+        label: 'Totale combinato',
+        data: somma,
+        borderColor: '#333',
+        backgroundColor: 'transparent',
+        borderDash: [6,3], tension: 0.3, borderWidth: 2, pointRadius: 0
+    });
+
+    if (chartRiepilogo) { try { chartRiepilogo.destroy(); } catch(e){} }
+    chartRiepilogo = new Chart(document.getElementById('grafico-riepilogo'), {
         type: 'line',
-        data: {
-            labels: labelAnni,
-            datasets: [
-                { label:'Valore stimato', data:valoriTotale, borderColor:'#7c2ce5',
-                  backgroundColor:'rgba(124,44,229,0.12)', fill:true, tension:0.3, borderWidth:2, pointRadius:0 },
-                { label:'Capitale versato', data:valoriVersato, borderColor:'#aaa',
-                  backgroundColor:'transparent', borderDash:[5,5], tension:0.3, borderWidth:1.5, pointRadius:0 }
-            ]
-        },
+        data: { labels, datasets },
         options: {
-            responsive:true, maintainAspectRatio:false,
-            interaction:{ mode:'index', intersect:false },
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode:'index', intersect:false },
             plugins: {
-                legend:{ display:true, labels:{ color:tickColor, font:{size:12} } },
-                tooltip:{ callbacks:{ label: ctx => ' '+ctx.dataset.label+': '+formatImporto(ctx.parsed.y) } }
+                legend: { display:true, labels:{ color:tickColor, font:{size:12} } },
+                tooltip: { callbacks: { label: ctx => ' '+ctx.dataset.label+': '+formatImporto(ctx.parsed.y) } }
             },
             scales: {
-                x:{ ticks:{ color:tickColor, maxTicksLimit:8 }, grid:{ color:gridColor } },
-                y:{ ticks:{ color:tickColor, callback: v => stato.valuta+' '+v.toLocaleString('it-IT') }, grid:{ color:gridColor } }
+                x: { ticks:{ color:tickColor, maxTicksLimit:8 }, grid:{ color:gridColor } },
+                y: { ticks:{ color:tickColor, callback: v => stato.valuta+' '+v.toLocaleString('it-IT') }, grid:{ color:gridColor } }
             }
         }
     });
-    setTimeout(() => document.getElementById('risultato-simulazione').scrollIntoView({ behavior:'smooth', block:'nearest' }), 100);
+}
+
+// Render grafici mini dopo che il DOM è aggiornato
+function renderGraficiPortafogli() {
+    if (!stato.portafogli) return;
+    stato.portafogli.forEach((p, idx) => {
+        const canvas = document.getElementById(`chart-p-${p.id}`);
+        if (!canvas) return;
+        const sim    = simulaPortafoglio(p);
+        const colore = COLORI_PORTAFOGLI[idx % COLORI_PORTAFOGLI.length];
+        const isDark = document.body.classList.contains('dark-mode');
+        const tc     = isDark ? '#888' : '#aaa';
+        const gc     = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+        new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: sim.labels,
+                datasets: [
+                    { label:'Stima', data:sim.totale, borderColor:colore, backgroundColor:colore+'22',
+                      fill:true, tension:0.3, borderWidth:2, pointRadius:0 },
+                    { label:'Versato', data:sim.versato, borderColor:'#bbb', backgroundColor:'transparent',
+                      borderDash:[4,3], tension:0.3, borderWidth:1.5, pointRadius:0 }
+                ]
+            },
+            options: {
+                responsive:true, maintainAspectRatio:false,
+                interaction:{ mode:'index', intersect:false },
+                plugins:{ legend:{ display:false }, tooltip:{ callbacks:{ label: ctx => ' '+ctx.dataset.label+': '+formatImporto(ctx.parsed.y) } } },
+                scales:{
+                    x:{ ticks:{ color:tc, maxTicksLimit:6, font:{size:10} }, grid:{ color:gc } },
+                    y:{ ticks:{ color:tc, font:{size:10}, callback: v => stato.valuta+' '+v.toLocaleString('it-IT') }, grid:{ color:gc } }
+                }
+            }
+        });
+    });
+}
+
+// ========================
+// MODALE PORTAFOGLIO
+// ========================
+function apriModalePortafoglio(id) {
+    assetTrovatoPortafoglio = null;
+    document.getElementById('portafoglio-asset-risultato').style.display = 'none';
+    document.getElementById('portafoglio-rendimento-nota').textContent = '🔍 Cerca l\'asset sopra oppure inserisci manualmente';
+    document.querySelectorAll('.portafoglio-valuta-prefix').forEach(el => el.textContent = stato.valuta);
+
+    if (id) {
+        // Modifica portafoglio esistente
+        const p = stato.portafogli.find(x => x.id === id);
+        if (!p) return;
+        document.getElementById('modale-portafoglio-titolo').textContent = '✏️ Modifica portafoglio';
+        document.getElementById('portafoglio-edit-id').value   = p.id;
+        document.getElementById('portafoglio-nome').value      = p.nome;
+        document.getElementById('portafoglio-asset-query').value = p.assetNome || '';
+        document.getElementById('portafoglio-rendimento').value  = p.rendimento;
+        document.getElementById('portafoglio-capitale').value    = p.capitaleBase || 0;
+        document.getElementById('portafoglio-contributo').value  = p.contributoMensile || 100;
+        document.getElementById('portafoglio-anni').value        = p.anni || 10;
+        if (p.assetNome) {
+            document.getElementById('portafoglio-rendimento-nota').textContent =
+                `📊 ${p.assetNome}${p.periodo ? ' — '+p.periodo : ''}: ${p.rendimento}% annuo`;
+        }
+    } else {
+        document.getElementById('modale-portafoglio-titolo').textContent = '➕ Nuovo portafoglio';
+        document.getElementById('portafoglio-edit-id').value   = '';
+        document.getElementById('portafoglio-nome').value      = '';
+        document.getElementById('portafoglio-asset-query').value = '';
+        document.getElementById('portafoglio-rendimento').value  = '';
+        document.getElementById('portafoglio-capitale').value    = '';
+        document.getElementById('portafoglio-contributo').value  = 100;
+        document.getElementById('portafoglio-anni').value        = 10;
+    }
+    document.getElementById('modale-portafoglio').style.display = 'flex';
+}
+
+function chiudiModalePortafoglio() {
+    document.getElementById('modale-portafoglio').style.display = 'none';
+}
+
+function salvaPortafoglio() {
+    const nome      = document.getElementById('portafoglio-nome').value.trim();
+    const rendimento = parseFloat(document.getElementById('portafoglio-rendimento').value);
+    const capitale   = parseFloat(document.getElementById('portafoglio-capitale').value) || 0;
+    const contributo = parseFloat(document.getElementById('portafoglio-contributo').value) || 0;
+    const anni       = parseInt(document.getElementById('portafoglio-anni').value) || 10;
+    const editId     = document.getElementById('portafoglio-edit-id').value;
+
+    if (!nome)                         { alert('Inserisci un nome per il portafoglio.'); return; }
+    if (isNaN(rendimento) || rendimento < 0) { alert('Inserisci un rendimento annuo valido.'); return; }
+
+    const asset = assetTrovatoPortafoglio;
+
+    if (editId) {
+        const p = stato.portafogli.find(x => x.id === editId);
+        if (p) {
+            p.nome = nome;
+            p.assetNome    = asset ? asset.nome    : (document.getElementById('portafoglio-asset-query').value || '');
+            p.assetTicker  = asset ? asset.ticker  : '';
+            p.periodo      = asset ? asset.periodo : '';
+            p.rendimento   = rendimento;
+            p.capitaleBase = Math.round(capitale * 100) / 100;
+            p.contributoMensile = Math.round(contributo * 100) / 100;
+            p.anni = anni;
+        }
+    } else {
+        if (!stato.portafogli) stato.portafogli = [];
+        stato.portafogli.push({
+            id: genId(),
+            nome,
+            assetNome:   asset ? asset.nome   : (document.getElementById('portafoglio-asset-query').value || ''),
+            assetTicker: asset ? asset.ticker : '',
+            periodo:     asset ? asset.periodo : '',
+            rendimento,
+            capitaleBase: Math.round(capitale * 100) / 100,
+            contributoMensile: Math.round(contributo * 100) / 100,
+            anni
+        });
+    }
+
+    salvaStato();
+    chiudiModalePortafoglio();
+    renderSavings();
+    setTimeout(renderGraficiPortafogli, 80);
+    renderDashboard();
+}
+
+function eliminaPortafoglio(id) {
+    const p = stato.portafogli.find(x => x.id === id);
+    if (!p) return;
+    const inUso = stato.transazioni.filter(t => t.portafoglioId === id).length;
+    const msg = inUso > 0
+        ? `Eliminare il portafoglio "${p.nome}"?\n${inUso} versamento${inUso>1?'i':''} resteranno come uscite non collegate.`
+        : `Eliminare il portafoglio "${p.nome}"?`;
+    if (!confirm(msg)) return;
+    stato.portafogli = stato.portafogli.filter(x => x.id !== id);
+    salvaStato();
+    renderSavings();
+    setTimeout(renderGraficiPortafogli, 80);
+    renderDashboard();
 }
 
 // ========================
@@ -951,6 +1264,19 @@ function aggiungiCategoria(tipo) {
 // ========================
 // MODALE VOCE
 // ========================
+function aggiornaFieldPortafoglio() {
+    const cat  = document.getElementById('voce-categoria').value;
+    const row  = document.getElementById('voce-portafoglio-row');
+    const sel  = document.getElementById('voce-portafoglio');
+    if (cat === 'Investimento' && stato.portafogli && stato.portafogli.length > 0) {
+        sel.innerHTML = '<option value="">— Nessun portafoglio collegato —</option>' +
+            stato.portafogli.map(p => `<option value="${p.id}">${escHTML(p.nome)}</option>`).join('');
+        row.style.display = 'block';
+    } else {
+        row.style.display = 'none';
+    }
+}
+
 function apriModaleVoce(tipo) {
     modaleVoceTipo = tipo;
     document.getElementById('modale-voce-titolo').textContent = tipo==='entrata' ? '💰 Aggiungi entrata' : '💸 Aggiungi uscita';
@@ -977,7 +1303,9 @@ function salvaVoce() {
     if (!importo || importo <= 0) { alert('Inserisci un importo valido.'); return; }
     if (!data)                    { alert('Inserisci una data.'); return; }
     stato.transazioni.push({ id:genId(), tipo:modaleVoceTipo, descrizione:desc,
-        importo:Math.round(importo*100)/100, categoria:cat, data, note });
+        importo:Math.round(importo*100)/100, categoria:cat, data, note,
+        portafoglioId: cat === 'Investimento' ? (document.getElementById('voce-portafoglio')?.value || null) : null
+    });
     salvaStato();
     chiudiModaleVoce();
     aggiornaVistaAttiva();
@@ -997,6 +1325,7 @@ function aggiornaVistaAttiva() {
     if (id==='vista-dashboard')    renderDashboard();
     if (id==='vista-entrate')      renderEntrate();
     if (id==='vista-uscite')       renderUscite();
+    if (id==='vista-savings')      { renderSavings(); setTimeout(renderGraficiPortafogli, 80); }
 }
 
 // ========================
@@ -1121,7 +1450,7 @@ function escAttr(s) {
 
 // Chiudi modali cliccando overlay
 document.addEventListener('click', e => {
-    ['modale-voce','modale-capitale','modale-giorno','modale-valuta'].forEach(id => {
+    ['modale-voce','modale-capitale','modale-giorno','modale-valuta','modale-portafoglio'].forEach(id => {
         const el = document.getElementById(id);
         if (el && e.target === el) el.style.display = 'none';
     });

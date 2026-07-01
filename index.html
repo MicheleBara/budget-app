@@ -66,7 +66,13 @@
                     <input type="number" id="voce-importo" placeholder="0.00" min="0" step="0.01">
                 </div>
                 <label>Categoria</label>
-                <select id="voce-categoria"></select>
+                <select id="voce-categoria" onchange="aggiornaFieldPortafoglio()"></select>
+                <div id="voce-portafoglio-row" style="display:none;">
+                    <label>Portafoglio <span style="font-weight:normal;color:#999;">(opzionale)</span></label>
+                    <select id="voce-portafoglio">
+                        <option value="">— Nessun portafoglio collegato —</option>
+                    </select>
+                </div>
                 <label>Data</label>
                 <input type="date" id="voce-data">
                 <label>Note (opzionale)</label>
@@ -283,87 +289,89 @@
     <div class="vista-contenuto">
         <div class="vista-header-row">
             <h2>📈 Savings & Investimenti</h2>
+            <button class="btn-aggiungi-principale" onclick="apriModalePortafoglio()">+ Portafoglio</button>
         </div>
 
-        <div class="savings-capitale-card">
-            <div>
-                <div class="savings-capitale-label">Capitale attuale</div>
-                <div class="savings-capitale-valore" id="savings-capitale-display">€ 0,00</div>
-                <div id="savings-capitale-dettaglio" class="savings-capitale-dettaglio" style="display:none;"></div>
+        <!-- KPI totale -->
+        <div class="savings-totale-card">
+            <div class="savings-totale-left">
+                <div class="savings-capitale-label">Portafoglio totale</div>
+                <div class="savings-capitale-valore" id="savings-totale-display">€ 0,00</div>
             </div>
-            <button class="btn-modifica-capitale" onclick="apriModaleCapitale()">✏️ Modifica base</button>
+            <div class="savings-totale-right" id="savings-totale-kpi"></div>
         </div>
 
-        <div class="simulatore-card">
-            <h3>🔮 Simulatore di crescita</h3>
-            <p class="simulatore-desc">Inizia a digitare: ti suggeriamo subito gli asset più comuni con il loro rendimento storico. Se non trovi quello che cerchi, prova comunque la ricerca: faremo un tentativo esteso.</p>
+        <!-- Lista portafogli -->
+        <div id="lista-portafogli"></div>
 
-            <div class="sim-search-box">
-                <label>Cerca asset per nome o ticker</label>
-                <div class="sim-search-row" style="position:relative;">
-                    <input type="text" id="sim-asset-query" placeholder="Es. FTSE All-World, VWCE, S&P 500, BTP, Oro..." autocomplete="off"
-                           oninput="onInputAsset()" onfocus="onInputAsset()" onblur="nascondiSuggerimentiAsset()">
-                    <button class="btn-cerca-asset" onclick="cercaAsset()" id="btn-cerca-asset">
-                        <span id="cerca-asset-txt">🔍 Cerca</span>
-                    </button>
-                    <div id="sim-asset-suggerimenti" class="sim-asset-suggerimenti" style="display:none;"></div>
-                </div>
-                <div id="sim-asset-risultato" class="sim-asset-risultato" style="display:none;"></div>
-            </div>
-
-            <div class="sim-griglia">
-                <div class="sim-campo">
-                    <label>Rendimento annuo atteso (%)</label>
-                    <input type="number" id="sim-rendimento" value="" min="0" max="200" step="0.1" placeholder="Es. 10.5">
-                    <div id="sim-rendimento-nota" class="sim-nota">🔍 Cerca un asset sopra oppure inserisci manualmente</div>
-                </div>
-                <div class="sim-campo">
-                    <label>Contributo mensile</label>
-                    <div class="importo-row">
-                        <span id="sim-valuta-prefix" class="valuta-prefix">€</span>
-                        <input type="number" id="sim-contributo" value="100" min="0" step="10">
-                    </div>
-                </div>
-                <div class="sim-campo">
-                    <label>Orizzonte temporale</label>
-                    <select id="sim-anni">
-                        <option value="5">5 anni</option>
-                        <option value="10" selected>10 anni</option>
-                        <option value="15">15 anni</option>
-                        <option value="20">20 anni</option>
-                        <option value="30">30 anni</option>
-                    </select>
-                </div>
-            </div>
-
-            <button class="btn-aggiungi" onclick="calcolaSimulazione()">📊 Calcola proiezione</button>
-        </div>
-
-        <div id="risultato-simulazione" style="display:none;">
-            <div class="sim-risultato-kpi">
-                <div class="sim-kpi-card sim-kpi-viola">
-                    <div class="sim-kpi-label">Valore finale stimato</div>
-                    <div class="sim-kpi-valore" id="sim-valore-finale">—</div>
-                </div>
-                <div class="sim-kpi-card sim-kpi-grigio">
-                    <div class="sim-kpi-label">Capitale versato</div>
-                    <div class="sim-kpi-valore" id="sim-capitale-versato">—</div>
-                </div>
-                <div class="sim-kpi-card sim-kpi-verde">
-                    <div class="sim-kpi-label">Rendimento maturato</div>
-                    <div class="sim-kpi-valore" id="sim-rendimento-maturato">—</div>
-                </div>
-            </div>
+        <!-- Grafico riepilogativo tutti i portafogli -->
+        <div id="grafico-riepilogo-wrap" style="display:none;">
             <div class="grafico-card">
-                <h4 id="sim-grafico-titolo">Crescita stimata nel tempo</h4>
+                <h4>📊 Proiezione combinata di tutti i portafogli</h4>
                 <div class="grafico-wrapper-alto">
-                    <canvas id="grafico-savings"></canvas>
+                    <canvas id="grafico-riepilogo"></canvas>
                 </div>
                 <p class="sim-disclaimer">⚠️ Simulazione indicativa basata su dati storici medi. Non costituisce consulenza finanziaria.</p>
             </div>
         </div>
+
     </div>
 </div>
+
+<!-- MODALE NUOVO/MODIFICA PORTAFOGLIO -->
+<div id="modale-portafoglio" class="modale-overlay" style="display:none;">
+    <div class="modale-box" style="max-width:520px;">
+        <div class="modale-header">
+            <span id="modale-portafoglio-titolo">➕ Nuovo portafoglio</span>
+            <button class="btn-modale-chiudi" onclick="chiudiModalePortafoglio()">✕</button>
+        </div>
+        <div style="padding:20px;">
+            <input type="hidden" id="portafoglio-edit-id">
+
+            <label>Nome portafoglio</label>
+            <input type="text" id="portafoglio-nome" placeholder="Es. ETF Azionario, Pensione, BTP...">
+
+            <label>Cerca asset per nome o ticker</label>
+            <div class="sim-search-row" style="position:relative; margin-top:6px;">
+                <input type="text" id="portafoglio-asset-query" placeholder="Es. VWCE, S&P 500, Oro..."
+                       autocomplete="off" oninput="onInputAssetPortafoglio()" onfocus="onInputAssetPortafoglio()" onblur="nascondiSuggerimentiPortafoglio()">
+                <button class="btn-cerca-asset" onclick="cercaAssetPortafoglio()" id="btn-cerca-asset-p">
+                    <span id="cerca-asset-txt-p">🔍 Cerca</span>
+                </button>
+                <div id="portafoglio-asset-suggerimenti" class="sim-asset-suggerimenti" style="display:none;"></div>
+            </div>
+            <div id="portafoglio-asset-risultato" class="sim-asset-risultato" style="display:none; margin-top:10px;"></div>
+
+            <label style="margin-top:14px;">Rendimento annuo atteso (%)</label>
+            <input type="number" id="portafoglio-rendimento" placeholder="Es. 10.5" min="0" max="200" step="0.1">
+            <div id="portafoglio-rendimento-nota" class="sim-nota">🔍 Cerca l'asset sopra oppure inserisci manualmente</div>
+
+            <label>Capitale base (già investito)</label>
+            <div class="importo-row">
+                <span id="portafoglio-valuta-prefix" class="valuta-prefix">€</span>
+                <input type="number" id="portafoglio-capitale" placeholder="0.00" min="0" step="100">
+            </div>
+
+            <label>Contributo mensile</label>
+            <div class="importo-row">
+                <span class="valuta-prefix" id="portafoglio-valuta-prefix2">€</span>
+                <input type="number" id="portafoglio-contributo" value="100" min="0" step="10">
+            </div>
+
+            <label>Orizzonte temporale</label>
+            <select id="portafoglio-anni">
+                <option value="5">5 anni</option>
+                <option value="10" selected>10 anni</option>
+                <option value="15">15 anni</option>
+                <option value="20">20 anni</option>
+                <option value="30">30 anni</option>
+            </select>
+
+            <button class="btn-aggiungi" onclick="salvaPortafoglio()">💾 Salva portafoglio</button>
+        </div>
+    </div>
+</div>
+
 
 <!-- ======================== -->
 <!-- VISTA: IMPOSTAZIONI     -->
