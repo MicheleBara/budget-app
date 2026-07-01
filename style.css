@@ -452,6 +452,30 @@ select {
 }
 .savings-capitale-label { font-size: 12px; opacity: 0.8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .savings-capitale-valore { font-size: 32px; font-weight: bold; line-height: 1; }
+.savings-capitale-dettaglio {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+.capitale-dettaglio-voce {
+    font-size: 12px;
+    opacity: 0.9;
+    background-color: rgba(255,255,255,0.15);
+    padding: 3px 10px;
+    border-radius: 12px;
+}
+.capitale-dettaglio-verde {
+    background-color: rgba(255,255,255,0.25);
+    font-weight: bold;
+}
+.capitale-dettaglio-sep {
+    font-size: 14px;
+    font-weight: bold;
+    opacity: 0.7;
+}
+
 .btn-modifica-capitale {
     padding: 8px 16px;
     background-color: rgba(255,255,255,0.2);

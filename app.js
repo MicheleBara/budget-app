@@ -19,14 +19,14 @@ let stato = {
 // Categorie predefinite (non eliminabili, ma rinominabili)
 const CATEGORIE_DEFAULT = {
     entrata: ['Stipendio','Freelance','Rendite','Regalo','Rimborso','Altro'],
-    uscita:  ['Casa','Cibo','Trasporti','Salute','Svago','Abbigliamento','Tecnologia','Viaggi','Bollette','Abbonamenti','Altro']
+    uscita:  ['Casa','Cibo','Trasporti','Salute','Svago','Abbigliamento','Tecnologia','Viaggi','Bollette','Abbonamenti','Investimento','Altro']
 };
 
 const EMOJI_CAT = {
     'Stipendio':'💼','Freelance':'💻','Rendite':'📊','Regalo':'🎁','Rimborso':'↩️',
     'Casa':'🏠','Cibo':'🛒','Trasporti':'🚌','Salute':'💊','Svago':'🎭',
     'Abbigliamento':'👕','Tecnologia':'📱','Viaggi':'✈️','Bollette':'⚡',
-    'Abbonamenti':'📺','Altro':'🔹'
+    'Abbonamenti':'📺','Investimento':'📈','Altro':'🔹'
 };
 
 const PALETTE_ENTRATE = ['#4caf50','#66bb6a','#81c784','#a5d6a7','#c8e6c9','#2e7d32','#43a047','#1b5e20','#388e3c','#00c853'];
@@ -412,7 +412,7 @@ function renderDashboard() {
 
     document.getElementById('kpi-entrate').textContent = formatImporto(totEntrate);
     document.getElementById('kpi-uscite').textContent  = formatImporto(totUscite);
-    document.getElementById('kpi-savings').textContent = formatImporto(stato.capitale);
+    document.getElementById('kpi-savings').textContent = formatImporto(getCapitaleTotale());
 
     // Grafici torta (mostrati sempre, non solo storico)
     const graficiDiv = document.getElementById('dashboard-grafici');
@@ -694,15 +694,47 @@ Se l'asset non è riconoscibile, metti trovato:false e gli altri campi null. Usa
     document.getElementById('cerca-asset-txt').textContent = '🔍 Cerca';
 }
 
+// Calcola il totale investito: capitale base + tutte le uscite "Investimento"
+function getCapitaleTotale() {
+    const investimenti = stato.transazioni
+        .filter(t => t.tipo === 'uscita' && t.categoria === 'Investimento')
+        .reduce((s, t) => s + t.importo, 0);
+    return (stato.capitale || 0) + investimenti;
+}
+
+function getCapitaleInvestimenti() {
+    return stato.transazioni
+        .filter(t => t.tipo === 'uscita' && t.categoria === 'Investimento')
+        .reduce((s, t) => s + t.importo, 0);
+}
+
 function renderSavings() {
-    document.getElementById('savings-capitale-display').textContent = formatImporto(stato.capitale);
-    document.getElementById('capitale-valuta-prefix').textContent = stato.valuta;
-    document.getElementById('sim-valuta-prefix').textContent = stato.valuta;
-    document.getElementById('capitale-input').value = stato.capitale || '';
+    const base         = stato.capitale || 0;
+    const investimenti = getCapitaleInvestimenti();
+    const totale       = base + investimenti;
+
+    document.getElementById('savings-capitale-display').textContent = formatImporto(totale);
+    document.getElementById('capitale-valuta-prefix').textContent   = stato.valuta;
+    document.getElementById('sim-valuta-prefix').textContent        = stato.valuta;
+    document.getElementById('capitale-input').value                 = base;
+
+    // Mostra il dettaglio base + versamenti se ci sono investimenti registrati
+    const dettaglio = document.getElementById('savings-capitale-dettaglio');
+    if (dettaglio) {
+        if (investimenti > 0) {
+            dettaglio.innerHTML = `
+                <span class="capitale-dettaglio-voce">Base: ${formatImporto(base)}</span>
+                <span class="capitale-dettaglio-sep">+</span>
+                <span class="capitale-dettaglio-voce capitale-dettaglio-verde">Versamenti: ${formatImporto(investimenti)}</span>`;
+            dettaglio.style.display = 'flex';
+        } else {
+            dettaglio.style.display = 'none';
+        }
+    }
 }
 
 function calcolaSimulazione() {
-    const capitaleIniziale = stato.capitale || 0;
+    const capitaleIniziale = getCapitaleTotale(); // usa il totale aggiornato
     const contributo = parseFloat(document.getElementById('sim-contributo').value) || 0;
     const rendAnnuo  = parseFloat(document.getElementById('sim-rendimento').value) / 100;
     const anni       = parseInt(document.getElementById('sim-anni').value);
